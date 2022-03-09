@@ -19,6 +19,10 @@ public class Transfer {
     @Positive(message = "Transfer amount must be positive.")
     private BigDecimal amount;
 
+    public Transfer() {
+
+    }
+
     public Transfer(int transfer_id, int transfer_type, int transfer_status_id, int account_from, int account_to, BigDecimal amount){
         this.transfer_id = transfer_id;
         this.transfer_type = transfer_type;

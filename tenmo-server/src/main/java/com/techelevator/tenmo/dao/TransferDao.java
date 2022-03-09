@@ -7,14 +7,16 @@ import java.util.List;
 
 public interface TransferDao {
 
-boolean checkSufficientFunds(BigDecimal balance, BigDecimal transferAmount);
+    BigDecimal getBalance(int accountId);
 
-BigDecimal withdrawMoneyFromSender(BigDecimal finalBalance, int accountId);
+    BigDecimal updateSenderBalance(BigDecimal finalBalance, int accountId);
 
-BigDecimal depositMoneyToReceiver(BigDecimal finalBalance, int accountId);
+    BigDecimal updateReceiverBalance(BigDecimal finalBalance, int accountId);
 
-List<Transfer> findUserTransfers();
+    List<Transfer> findUserTransfers(int id);
 
-Transfer findTransfer(int id);
+    Transfer findTransfer(int id);
+
+    int getUserAccountId(String username);
 
 }
