@@ -17,14 +17,13 @@ import java.security.Principal;
 @RestController
 public class ApplicationController {
 
-    JdbcTemplate jdbcTemplate = new JdbcTemplate();
     TransferDao transferDao;
 
-    public ApplicationController() {
-        this.transferDao = new JdbcTransferDao(jdbcTemplate);
+    public ApplicationController(TransferDao transferDao) {
+        this.transferDao = transferDao;
     }
 
-    @GetMapping(path ="balance")
+    @GetMapping(path ="/balance")
     public BigDecimal findBalance(Principal principal) {
         String username = principal.getName();
         int accountId = this.transferDao.getUserAccountId(username);
