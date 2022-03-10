@@ -6,15 +6,14 @@ import java.math.BigDecimal;
 
 public class Transfer {
 
-    @NotBlank(message = "Transfer ID cannot be blank.")
     private int transfer_id;
-    @NotBlank(message = "Transfer type cannot be blank.")
+    @Positive(message = "Transfer type cannot be blank.")
     private int transfer_type;
-    @NotBlank(message = "Transfer status ID cannot be blank.")
+    @Positive(message = "Transfer status ID cannot be blank.")
     private int transfer_status_id;
-    @NotBlank(message = "Sender cannot be blank.")
+    @Positive(message = "Sender cannot be blank.")
     private int account_from;
-    @NotBlank(message = "Receiver cannot be blank.")
+    @Positive(message = "Receiver cannot be blank.")
     private int account_to;
     @Positive(message = "Transfer amount must be positive.")
     private BigDecimal amount;

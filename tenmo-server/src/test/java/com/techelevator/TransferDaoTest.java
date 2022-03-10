@@ -1,6 +1,7 @@
 package com.techelevator;
 
 import com.techelevator.tenmo.dao.JdbcTransferDao;
+import com.techelevator.tenmo.dao.UserDao;
 import com.techelevator.tenmo.model.Transfer;
 import org.junit.Assert;
 import org.junit.Test;
@@ -10,6 +11,8 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 
 public class TransferDaoTest {
+
+    private UserDao userDao;
 
     JdbcTemplate jdbcTemplate = new JdbcTemplate();
     JdbcTransferDao jdbcTransferDao = new JdbcTransferDao(jdbcTemplate);
