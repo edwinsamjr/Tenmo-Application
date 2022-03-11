@@ -45,7 +45,9 @@ public class App {
                 handleRegister();
             } else if (menuSelection == 2) {
                 handleLogin();
-                tenmoService.setAuthToken(currentUser.getToken());
+                if (currentUser != null) {
+                    tenmoService.setAuthToken(currentUser.getToken());
+                }
             } else if (menuSelection != 0) {
                 System.out.println("Invalid Selection");
                 consoleService.pause();
@@ -97,71 +99,11 @@ public class App {
 
     private void viewCurrentBalance() {
         BigDecimal balance = tenmoService.getBalance();
-        System.out.println("```");
-        System.out.println("Your current account balance is: $" + balance);
-        System.out.println("```");
-        System.out.println();
+        tenmoService.viewCurrentBalance(balance);
     }
 
     private void viewTransferHistory() {
-        System.out.println();
-        System.out.println("'''");
-        System.out.println("-------------------------------------------");
-        System.out.println("Transfers");
-        System.out.println("ID          From/To                 Amount");
-        System.out.println("-------------------------------------------");
-
-
-        Transfer[] transfers = tenmoService.findUserTransfers();
-
-
-        for (Transfer transfer : transfers) {
-            int transferId = transfer.getTransfer_id();
-            String senderName = tenmoService.getUsernameByAccountId(transfer.getAccount_from());
-            String receiverName = tenmoService.getUsernameByAccountId(transfer.getAccount_to());
-            BigDecimal amount = transfer.getAmount();
-
-            String fieldToPrint = null;
-
-            int currentUserAccountId = tenmoService.getAccountIdByUsername();
-            boolean currentUserIsSender = currentUserAccountId == transfer.getAccount_from();
-
-
-            //if current user is the sender, write To and receiver's name
-            if (currentUserIsSender) {
-                fieldToPrint = "To:    " + receiverName;
-            }
-            //else if current is the receiver, write from and sender's name
-            else if (!currentUserIsSender) {
-                fieldToPrint = "From:  " + senderName;
-            }
-
-            System.out.printf("%-11d %-22s $%7.2f %n", transferId, fieldToPrint, amount);
-        }
-
-        int userSelection = 0;
-        if (transfers.length != 0) {
-            System.out.println();
-            userSelection = consoleService.promptForInt("Please enter transfer ID to view details (0 to cancel): ");
-        }
-
-        if (userSelection != 0) {
-
-            for (Transfer transfer : transfers) {
-
-
-                if (transfer.getTransfer_id() == userSelection) {
-                    String senderName = tenmoService.getUsernameByAccountId(transfer.getAccount_from());
-                    String receiverName = tenmoService.getUsernameByAccountId(transfer.getAccount_to());
-                    transfer.printDetails(senderName, receiverName, "Send", "Approved");
-                }
-
-            }
-
-
-        }
-
-
+        tenmoService.viewTransfers();
     }
 
     private void viewPendingRequests() {
@@ -170,29 +112,7 @@ public class App {
     }
 
     private void sendBucks() {
-        try {
-            User[] users = tenmoService.getUserList();
-            tenmoService.printUserList(users);
-            int userSelection = consoleService.promptForInt("Enter ID of user you are sending to (0 to cancel): ");
-            User selectedUser = null;
-            for (User user : users) {
-                if (user.getId() == userSelection) {
-                    selectedUser = user;
-                }
-            }
-
-            Transfer transfer = null;
-
-            if (userSelection != 0) {
-                BigDecimal amount = consoleService.promptForBigDecimal("Enter amount: ");
-                int senderAccount = tenmoService.getAccountIdByUsername();
-                int receiverAccount = tenmoService.getAccountIdByUsername(selectedUser.getUsername());
-                transfer = new Transfer(2, 2, senderAccount, receiverAccount, amount);
-            }
-            tenmoService.transfer(transfer);
-        } catch (NullPointerException e){
-            System.out.println("Invalid User ID");
-        }
+        tenmoService.sendBucks();
     }
 
     private void requestBucks() {

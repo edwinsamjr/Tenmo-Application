@@ -14,6 +14,7 @@ public class TenmoService {
 
     private static final String API_BASE_URL = "http://localhost:8080/";
     private final RestTemplate restTemplate = new RestTemplate();
+    private ConsoleService consoleService = new ConsoleService();
 
     private String authToken;
 
@@ -22,6 +23,8 @@ public class TenmoService {
     }
 
     public Transfer[] findUserTransfers() {
+        //Gets all transfer for current user
+
         Transfer[] transfers = null;
         try {
             ResponseEntity<Transfer[]> response = restTemplate.exchange(API_BASE_URL + "viewtransfers",
@@ -45,7 +48,22 @@ public class TenmoService {
         return username;
     }
 
+    public User[] getUserList() {
+        //Lists all users
+
+        User[] users = null;
+        try {
+            ResponseEntity<User[]> response = restTemplate.exchange(API_BASE_URL + "users",
+                    HttpMethod.GET, makeAuthEntity(), User[].class);
+            users = response.getBody();
+        } catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        }
+        return users;
+    }
+
     public int getAccountIdByUsername() {
+        //Gets account Id for current user
         int accountId = -1;
 
         try {
@@ -60,6 +78,7 @@ public class TenmoService {
     }
 
     public int getAccountIdByUsername(String username) {
+        //Gets account Id given a username
         int accountId = -1;
 
         try {
@@ -75,6 +94,8 @@ public class TenmoService {
 
 
     public BigDecimal getBalance() {
+        //Gets current user's balance
+
         BigDecimal balance = new BigDecimal("0.00");
         try {
             ResponseEntity<BigDecimal> response = restTemplate.exchange(API_BASE_URL + "balance",
@@ -88,14 +109,16 @@ public class TenmoService {
     }
 
     public void transfer(Transfer transfer) {
+        //Check user has sufficient funds and positive transfer amount
+        //Completes transfer
+
         try {
             boolean hasSufficientFunds = getBalance().compareTo(transfer.getAmount()) < 0;
             boolean positiveTransferAmount = transfer.getAmount().compareTo(new BigDecimal("0.00")) > 0;
             if (hasSufficientFunds || !positiveTransferAmount) {
                 throw new IllegalArgumentException();
             }
-            ResponseEntity<Transfer> response = restTemplate.exchange(API_BASE_URL + "transfer",
-                    HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
+            restTemplate.exchange(API_BASE_URL + "transfer", HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
         } catch (RestClientResponseException | ResourceAccessException e) {
             BasicLogger.log(e.getMessage());
         } catch (IllegalArgumentException e) {
@@ -117,19 +140,6 @@ public class TenmoService {
         return new HttpEntity<>(transfer, headers);
     }
 
-
-    public User[] getUserList() {
-        User[] users = null;
-        try {
-            ResponseEntity<User[]> response = restTemplate.exchange(API_BASE_URL + "users",
-                    HttpMethod.GET, makeAuthEntity(), User[].class);
-            users = response.getBody();
-        } catch (RestClientResponseException | ResourceAccessException e) {
-            BasicLogger.log(e.getMessage());
-        }
-        return users;
-    }
-
     public void printUserList(User[] users) {
         System.out.println("'''");
         System.out.println("-------------------------------------------");
@@ -143,16 +153,101 @@ public class TenmoService {
         System.out.println();
     }
 
+    public void sendBucks() {
+        try {
+            User[] users = getUserList();
+            printUserList(users);
+            int userSelection = consoleService.promptForInt("Enter ID of user you are sending to (0 to cancel): ");
+            User selectedUser = null;
+            for (User user : users) {
+                if (user.getId() == userSelection) {
+                    selectedUser = user;
+                }
+            }
+
+            Transfer transfer = null;
+
+            if (userSelection != 0) {
+                BigDecimal amount = consoleService.promptForBigDecimal("Enter amount: ");
+                int senderAccount = getAccountIdByUsername();
+                int receiverAccount = getAccountIdByUsername(selectedUser.getUsername());
+                transfer = new Transfer(2, 2, senderAccount, receiverAccount, amount);
+            }
+            transfer(transfer);
+            System.out.println();
+            System.out.println("You have sent $" + transfer.getAmount() + " to " + selectedUser.getUsername());
+        } catch (NullPointerException e) {
+            System.out.println("Invalid User ID");
+        }
+    }
+
+    public void viewTransfers() {
+        System.out.println();
+        System.out.println("'''");
+        System.out.println("-------------------------------------------");
+        System.out.println("Transfers");
+        System.out.println("ID          From/To                 Amount");
+        System.out.println("-------------------------------------------");
+
+
+        Transfer[] transfers = findUserTransfers();
+
+
+        for (Transfer transfer : transfers) {
+            int transferId = transfer.getTransfer_id();
+            String senderName = getUsernameByAccountId(transfer.getAccount_from());
+            String receiverName = getUsernameByAccountId(transfer.getAccount_to());
+            BigDecimal amount = transfer.getAmount();
+
+            String fieldToPrint = null;
+
+            int currentUserAccountId = getAccountIdByUsername();
+            boolean currentUserIsSender = currentUserAccountId == transfer.getAccount_from();
+
+
+            //if current user is the sender, write To and receiver's name
+            if (currentUserIsSender) {
+                fieldToPrint = "To:    " + receiverName;
+            }
+            //else if current is the receiver, write from and sender's name
+            else if (!currentUserIsSender) {
+                fieldToPrint = "From:  " + senderName;
+            }
+
+            System.out.printf("%-11d %-22s $%7.2f %n", transferId, fieldToPrint, amount);
+        }
+
+        int userSelection = 0;
+        if (transfers.length != 0) {
+            System.out.println();
+            userSelection = consoleService.promptForInt("Please enter transfer ID to view details (0 to cancel): ");
+        }
+
+        if (userSelection != 0) {
+
+            for (Transfer transfer : transfers) {
+
+
+                if (transfer.getTransfer_id() == userSelection) {
+                    String senderName = getUsernameByAccountId(transfer.getAccount_from());
+                    String receiverName = getUsernameByAccountId(transfer.getAccount_to());
+                    transfer.printDetails(senderName, receiverName, "Send", "Approved");
+                }
+
+            }
+
+
+        }
+    }
+
+    public void viewCurrentBalance(BigDecimal balance) {
+        System.out.println("```");
+        System.out.println("Your current account balance is: $" + balance);
+        System.out.println("```");
+        System.out.println();
+    }
+
 
 }
 
-/*
-```
--------------------------------------------
-Users
-ID          Name
--------------------------------------------
-313         Bernice
-54          Larry
----------
- */
+

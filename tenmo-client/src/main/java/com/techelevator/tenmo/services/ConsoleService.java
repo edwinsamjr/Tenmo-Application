@@ -4,6 +4,7 @@ package com.techelevator.tenmo.services;
 import com.techelevator.tenmo.model.UserCredentials;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Scanner;
 
 public class ConsoleService {
@@ -74,7 +75,7 @@ public class ConsoleService {
         System.out.print(prompt);
         while (true) {
             try {
-                return new BigDecimal(scanner.nextLine());
+                return new BigDecimal(scanner.nextLine()).setScale(2, RoundingMode.DOWN);
             } catch (NumberFormatException e) {
                 System.out.println("Please enter a valid number.");
             }
