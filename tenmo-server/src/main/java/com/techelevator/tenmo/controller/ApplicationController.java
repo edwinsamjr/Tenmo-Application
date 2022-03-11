@@ -1,12 +1,10 @@
 package com.techelevator.tenmo.controller;
 
-import com.techelevator.tenmo.dao.JdbcTransferDao;
 import com.techelevator.tenmo.dao.TransferDao;
 import com.techelevator.tenmo.dao.UserDao;
 import com.techelevator.tenmo.model.Transfer;
 import com.techelevator.tenmo.model.User;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -77,7 +75,7 @@ public class ApplicationController {
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(path = "/transfer")
     public void addTransfer(@Valid @RequestBody Transfer transfer) {
-        this.transferDao.create(transfer);
+        this.transferDao.send(transfer);
 
 
         // TODO - Add exception if create doesn't work
@@ -102,6 +100,13 @@ public class ApplicationController {
         int accountId = transferDao.getUserAccountId(principal.getName());
         return  accountId;
     }
+
+    @GetMapping(path = "/account/{username}")
+    public int getAccountIdByUsername(@PathVariable String username){
+        int accountId = transferDao.getUserAccountId(username);
+        return accountId;
+    }
+
 
 
 }

@@ -28,7 +28,6 @@ public class JdbcTransferDao implements TransferDao {
     }
 
 
-
     public boolean checkSufficientFunds(BigDecimal balance, BigDecimal transferAmount) {
         if (balance.compareTo(transferAmount) > 0) {
             return true;
@@ -78,9 +77,9 @@ public class JdbcTransferDao implements TransferDao {
     @Override
     public int getUserAccountId(String username) {
         String sql = "SELECT account_id " +
-                     "FROM tenmo_user " +
-                        "JOIN account ON account.user_id = tenmo_user.user_id " +
-                     "WHERE username = ?;";
+                "FROM tenmo_user " +
+                "JOIN account ON account.user_id = tenmo_user.user_id " +
+                "WHERE username = ?;";
         SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql, username);
         int accountId = -1;
         if (rowSet.next()) {
@@ -93,9 +92,9 @@ public class JdbcTransferDao implements TransferDao {
     @Override
     public List<Transfer> findUserTransfers(int accountId) {
         String sql = "SELECT transfer_id, transfer_type_id, transfer_status_id, account_from, account_to, amount " +
-                     "FROM transfer " +
-                     "WHERE transfer.account_from = ? OR transfer.account_to = ? " +
-                     "ORDER BY transfer_id;";
+                "FROM transfer " +
+                "WHERE transfer.account_from = ? OR transfer.account_to = ? " +
+                "ORDER BY transfer_id;";
 
         SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql, accountId, accountId);
         List<Transfer> transfers = new ArrayList<>();
@@ -123,37 +122,43 @@ public class JdbcTransferDao implements TransferDao {
     }
 
     @Override
-    public boolean create(Transfer transfer) {
+    public boolean send(Transfer transfer) {
         transfer.setTransfer_id(getMaxIdPlusOne());
+        BigDecimal userBalance = getBalance(transfer.getAccount_from());
+        boolean hasSufficientFunds = userBalance.compareTo(transfer.getAmount()) >= 0;
 
         String sql = "INSERT INTO transfer (transfer_type_id, transfer_status_id, account_from, account_to, amount)" +
-                     "VALUES (?, ?, ?, ?, ?)";
-        if (verifyAccounts(transfer)) {
+                "VALUES (?, ?, ?, ?, ?)";
+        if (verifyAccounts(transfer) && hasSufficientFunds) {
             completeTransfer(transfer);
-        }
-        Integer newTransferId;
-
-        try {
-            newTransferId = this.jdbcTemplate.queryForObject(sql, Integer.class, transfer.getTransfer_type(),
-                        transfer.getTransfer_status_id(), transfer.getAccount_from(), transfer.getAccount_to(), transfer.getAmount());
-
-        } catch (DataAccessException e) {
+        } else {
             return false;
         }
 
+
+        Integer newTransferId;
+
+        try {
+            if (hasSufficientFunds) {
+                newTransferId = this.jdbcTemplate.queryForObject(sql, Integer.class, 2,
+                        2, transfer.getAccount_from(), transfer.getAccount_to(), transfer.getAmount());
+            }
+        } catch (DataAccessException e) {
+            return false;
+        }
         return true;
     }
 
     @Override
-    public String getUsernameByAccountId (int accountId) {
+    public String getUsernameByAccountId(int accountId) {
         String username = null;
         String sql = "SELECT username " +
-                     "FROM account " +
-                        "JOIN tenmo_user ON tenmo_user.user_id = account.user_id " +
-                    "WHERE account.account_id = ?;";
+                "FROM account " +
+                "JOIN tenmo_user ON tenmo_user.user_id = account.user_id " +
+                "WHERE account.account_id = ?;";
         SqlRowSet rowSet = this.jdbcTemplate.queryForRowSet(sql, accountId);
 
-        if(rowSet.next()) {
+        if (rowSet.next()) {
             username = rowSet.getString("username");
         }
 
@@ -228,6 +233,8 @@ public class JdbcTransferDao implements TransferDao {
         boolean senderAccountExists = false;
         boolean receiverAccountExists = false;
 
+        boolean senderAndReceiverMatch = transfer.getAccount_from() == transfer.getAccount_to();
+
         List<User> users = userDao.findAll();
 
         List<Integer> accountNums = new ArrayList<>();
@@ -238,14 +245,14 @@ public class JdbcTransferDao implements TransferDao {
         }
 
         for (int accountNum : accountNums) {
-            if (transfer.getAccount_from() == accountNum){
+            if (transfer.getAccount_from() == accountNum) {
                 senderAccountExists = true;
             } else if (transfer.getAccount_to() == accountNum) {
                 receiverAccountExists = true;
             }
         }
 
-        if (senderAccountExists && receiverAccountExists) {
+        if (senderAccountExists && receiverAccountExists && !senderAndReceiverMatch) {
             return true;
         } else {
             return false;
@@ -253,7 +260,6 @@ public class JdbcTransferDao implements TransferDao {
 
 
     }
-
 
 
 //    public List<User> findAll() {

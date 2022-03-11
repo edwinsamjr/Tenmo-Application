@@ -76,7 +76,7 @@ public class ConsoleService {
             try {
                 return new BigDecimal(scanner.nextLine());
             } catch (NumberFormatException e) {
-                System.out.println("Please enter a decimal number.");
+                System.out.println("Please enter a valid number.");
             }
         }
     }

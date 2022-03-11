@@ -2,6 +2,7 @@ package com.techelevator.tenmo;
 
 import com.techelevator.tenmo.model.AuthenticatedUser;
 import com.techelevator.tenmo.model.Transfer;
+import com.techelevator.tenmo.model.User;
 import com.techelevator.tenmo.model.UserCredentials;
 import com.techelevator.tenmo.services.*;
 import io.cucumber.java.bs.A;
@@ -21,8 +22,6 @@ public class App {
     private final TenmoService tenmoService = new TenmoService();
 
 
-
-
     public static void main(String[] args) {
 
         App app = new App();
@@ -36,6 +35,7 @@ public class App {
             mainMenu();
         }
     }
+
     private void loginMenu() {
         int menuSelection = -1;
         while (menuSelection != 0 && currentUser == null) {
@@ -95,15 +95,15 @@ public class App {
         }
     }
 
-	private void viewCurrentBalance() {
+    private void viewCurrentBalance() {
         BigDecimal balance = tenmoService.getBalance();
         System.out.println("```");
         System.out.println("Your current account balance is: $" + balance);
         System.out.println("```");
         System.out.println();
-	}
+    }
 
-	private void viewTransferHistory() {
+    private void viewTransferHistory() {
         System.out.println();
         System.out.println("'''");
         System.out.println("-------------------------------------------");
@@ -113,7 +113,6 @@ public class App {
 
 
         Transfer[] transfers = tenmoService.findUserTransfers();
-
 
 
         for (Transfer transfer : transfers) {
@@ -126,7 +125,6 @@ public class App {
 
             int currentUserAccountId = tenmoService.getAccountIdByUsername();
             boolean currentUserIsSender = currentUserAccountId == transfer.getAccount_from();
-
 
 
             //if current user is the sender, write To and receiver's name
@@ -164,23 +162,42 @@ public class App {
         }
 
 
+    }
 
-		
-	}
+    private void viewPendingRequests() {
+        // TODO Auto-generated method stub
 
-	private void viewPendingRequests() {
-		// TODO Auto-generated method stub
-		
-	}
+    }
 
-	private void sendBucks() {
-		// TODO Auto-generated method stub
-		
-	}
+    private void sendBucks() {
+        try {
+            User[] users = tenmoService.getUserList();
+            tenmoService.printUserList(users);
+            int userSelection = consoleService.promptForInt("Enter ID of user you are sending to (0 to cancel): ");
+            User selectedUser = null;
+            for (User user : users) {
+                if (user.getId() == userSelection) {
+                    selectedUser = user;
+                }
+            }
 
-	private void requestBucks() {
-		// TODO Auto-generated method stub
-		
-	}
+            Transfer transfer = null;
+
+            if (userSelection != 0) {
+                BigDecimal amount = consoleService.promptForBigDecimal("Enter amount: ");
+                int senderAccount = tenmoService.getAccountIdByUsername();
+                int receiverAccount = tenmoService.getAccountIdByUsername(selectedUser.getUsername());
+                transfer = new Transfer(2, 2, senderAccount, receiverAccount, amount);
+            }
+            tenmoService.transfer(transfer);
+        } catch (NullPointerException e){
+            System.out.println("Invalid User ID");
+        }
+    }
+
+    private void requestBucks() {
+        // TODO Auto-generated method stub
+
+    }
 
 }
