@@ -77,4 +77,24 @@ public class Transfer {
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
+
+
+    public void printDetails(String senderName, String receiverName, String typeName, String statusName) {
+        System.out.println();
+        System.out.println("```");
+        System.out.println("--------------------------------------------");
+        System.out.println("Transfer Details");
+        System.out.println("--------------------------------------------");
+        System.out.println("Id: " + this.transfer_id);
+        System.out.println("From: " + senderName);
+        System.out.println("To: " + receiverName);
+        System.out.println("Type: " + typeName);
+        System.out.println("Status: " + statusName);
+        System.out.println("Amount: $" + this.amount);
+        System.out.println("```");
+        System.out.println();
+
+    }
+
+
 }

@@ -3,12 +3,11 @@ package com.techelevator.tenmo;
 import com.techelevator.tenmo.model.AuthenticatedUser;
 import com.techelevator.tenmo.model.Transfer;
 import com.techelevator.tenmo.model.UserCredentials;
-import com.techelevator.tenmo.services.AuthenticationService;
-import com.techelevator.tenmo.services.ConsoleService;
-import com.techelevator.tenmo.services.RestUserService;
-import com.techelevator.tenmo.services.TenmoService;
+import com.techelevator.tenmo.services.*;
+import io.cucumber.java.bs.A;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 public class App {
 
@@ -16,9 +15,13 @@ public class App {
 
     private final ConsoleService consoleService = new ConsoleService();
     private final AuthenticationService authenticationService = new AuthenticationService(API_BASE_URL);
-    private final TenmoService tenmoService = new TenmoService();
 
     private AuthenticatedUser currentUser;
+
+    private final TenmoService tenmoService = new TenmoService();
+
+
+
 
     public static void main(String[] args) {
 
@@ -42,6 +45,7 @@ public class App {
                 handleRegister();
             } else if (menuSelection == 2) {
                 handleLogin();
+                tenmoService.setAuthToken(currentUser.getToken());
             } else if (menuSelection != 0) {
                 System.out.println("Invalid Selection");
                 consoleService.pause();
@@ -92,13 +96,15 @@ public class App {
     }
 
 	private void viewCurrentBalance() {
-        RestUserService restUserService = new RestUserService();
-        System.out.println(restUserService.getUser().getUsername());
-		
+        BigDecimal balance = tenmoService.getBalance();
+        System.out.println("```");
+        System.out.println("Your current account balance is: $" + balance);
+        System.out.println("```");
+        System.out.println();
 	}
 
 	private void viewTransferHistory() {
-        BigDecimal amount = new BigDecimal("10.34");
+        System.out.println();
         System.out.println("'''");
         System.out.println("-------------------------------------------");
         System.out.println("Transfers");
@@ -107,9 +113,58 @@ public class App {
 
 
         Transfer[] transfers = tenmoService.findUserTransfers();
-        for(Transfer transfer : transfers){
-            System.out.printf("%-12d%-23s$%7.2f%n", transfer.getTransfer_id(), "elephant", amount);
+
+
+
+        for (Transfer transfer : transfers) {
+            int transferId = transfer.getTransfer_id();
+            String senderName = tenmoService.getUsernameByAccountId(transfer.getAccount_from());
+            String receiverName = tenmoService.getUsernameByAccountId(transfer.getAccount_to());
+            BigDecimal amount = transfer.getAmount();
+
+            String fieldToPrint = null;
+
+            int currentUserAccountId = tenmoService.getAccountIdByUsername();
+            boolean currentUserIsSender = currentUserAccountId == transfer.getAccount_from();
+
+
+
+            //if current user is the sender, write To and receiver's name
+            if (currentUserIsSender) {
+                fieldToPrint = "To:    " + receiverName;
+            }
+            //else if current is the receiver, write from and sender's name
+            else if (!currentUserIsSender) {
+                fieldToPrint = "From:  " + senderName;
+            }
+
+            System.out.printf("%-11d %-22s $%7.2f %n", transferId, fieldToPrint, amount);
         }
+
+        int userSelection = 0;
+        if (transfers.length != 0) {
+            System.out.println();
+            userSelection = consoleService.promptForInt("Please enter transfer ID to view details (0 to cancel): ");
+        }
+
+        if (userSelection != 0) {
+
+            for (Transfer transfer : transfers) {
+
+
+                if (transfer.getTransfer_id() == userSelection) {
+                    String senderName = tenmoService.getUsernameByAccountId(transfer.getAccount_from());
+                    String receiverName = tenmoService.getUsernameByAccountId(transfer.getAccount_to());
+                    transfer.printDetails(senderName, receiverName, "Send", "Approved");
+                }
+
+            }
+
+
+        }
+
+
+
 		
 	}
 

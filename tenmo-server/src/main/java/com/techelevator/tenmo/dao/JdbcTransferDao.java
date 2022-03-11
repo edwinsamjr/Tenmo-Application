@@ -144,6 +144,23 @@ public class JdbcTransferDao implements TransferDao {
         return true;
     }
 
+    @Override
+    public String getUsernameByAccountId (int accountId) {
+        String username = null;
+        String sql = "SELECT username " +
+                     "FROM account " +
+                        "JOIN tenmo_user ON tenmo_user.user_id = account.user_id " +
+                    "WHERE account.account_id = ?;";
+        SqlRowSet rowSet = this.jdbcTemplate.queryForRowSet(sql, accountId);
+
+        if(rowSet.next()) {
+            username = rowSet.getString("username");
+        }
+
+        return username;
+
+    }
+
 
     private Transfer mapRowToTransfer(SqlRowSet rowSet) {
         Transfer transfer = new Transfer();
@@ -236,6 +253,8 @@ public class JdbcTransferDao implements TransferDao {
 
 
     }
+
+
 
 //    public List<User> findAll() {
 //        List<User> users = new ArrayList<>();

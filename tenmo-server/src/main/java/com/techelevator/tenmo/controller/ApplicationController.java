@@ -83,11 +83,24 @@ public class ApplicationController {
         // TODO - Add exception if create doesn't work
     }
 
+    @PreAuthorize("permitAll")
     @GetMapping(path = "/user")
     public User getUser(Principal principal){
         String username = principal.getName();
         User user = userDao.findByUsername(username);
         return user;
+    }
+
+    @GetMapping(path = "/username/{id}")
+    public String getUsernameByAccountId(Principal principal, @PathVariable int id) {
+        String username = transferDao.getUsernameByAccountId(id);
+        return username;
+    }
+
+    @GetMapping(path = "/account")
+        public int getAccountId(Principal principal) {
+        int accountId = transferDao.getUserAccountId(principal.getName());
+        return  accountId;
     }
 
 

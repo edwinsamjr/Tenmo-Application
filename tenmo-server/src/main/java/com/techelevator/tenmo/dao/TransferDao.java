@@ -21,4 +21,6 @@ public interface TransferDao {
 
     boolean create(Transfer transfer);
 
+    String getUsernameByAccountId (int accountId);
+
 }
