@@ -1,9 +1,14 @@
 package com.techelevator.tenmo;
 
 import com.techelevator.tenmo.model.AuthenticatedUser;
+import com.techelevator.tenmo.model.Transfer;
 import com.techelevator.tenmo.model.UserCredentials;
 import com.techelevator.tenmo.services.AuthenticationService;
 import com.techelevator.tenmo.services.ConsoleService;
+import com.techelevator.tenmo.services.RestUserService;
+import com.techelevator.tenmo.services.TenmoService;
+
+import java.math.BigDecimal;
 
 public class App {
 
@@ -11,10 +16,12 @@ public class App {
 
     private final ConsoleService consoleService = new ConsoleService();
     private final AuthenticationService authenticationService = new AuthenticationService(API_BASE_URL);
+    private final TenmoService tenmoService = new TenmoService();
 
     private AuthenticatedUser currentUser;
 
     public static void main(String[] args) {
+
         App app = new App();
         app.run();
     }
@@ -85,12 +92,24 @@ public class App {
     }
 
 	private void viewCurrentBalance() {
-		// TODO Auto-generated method stub
+        RestUserService restUserService = new RestUserService();
+        System.out.println(restUserService.getUser().getUsername());
 		
 	}
 
 	private void viewTransferHistory() {
-		// TODO Auto-generated method stub
+        BigDecimal amount = new BigDecimal("10.34");
+        System.out.println("'''");
+        System.out.println("-------------------------------------------");
+        System.out.println("Transfers");
+        System.out.println("ID          From/To                 Amount");
+        System.out.println("-------------------------------------------");
+
+
+        Transfer[] transfers = tenmoService.findUserTransfers();
+        for(Transfer transfer : transfers){
+            System.out.printf("%-12d%-23s$%7.2f%n", transfer.getTransfer_id(), "elephant", amount);
+        }
 		
 	}
 

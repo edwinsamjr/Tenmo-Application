@@ -28,7 +28,7 @@ public class ApplicationController {
         this.userDao = userDao;
     }
 
-    @GetMapping(path ="/balance")
+    @GetMapping(path = "/balance")
     public BigDecimal findBalance(Principal principal) {
         String username = principal.getName();
         int accountId = this.transferDao.getUserAccountId(username);
@@ -44,7 +44,7 @@ public class ApplicationController {
 
         String username = principal.getName();
 
-        for (User user : allUsers){
+        for (User user : allUsers) {
             User currentUser = this.userDao.findByUsername(username);
             boolean loggedInUser = user.getUsername().equals(currentUser.getUsername());
             if (!loggedInUser) {
@@ -64,26 +64,31 @@ public class ApplicationController {
         int accountId = this.transferDao.getUserAccountId(username);
         currentUserTransfers = this.transferDao.findUserTransfers(accountId);
 
-        return  currentUserTransfers;
+        return currentUserTransfers;
 
     }
 
-    @GetMapping (path = "/viewtransfers/{id}")
+    @GetMapping(path = "/viewtransfers/{id}")
     public Transfer viewTransferById(@PathVariable int id) {
         Transfer transfer = this.transferDao.findTransfer(id);
         return transfer;
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping (path = "/transfer")
-    public void addTransfer(@Valid @RequestBody Transfer transfer){
+    @PostMapping(path = "/transfer")
+    public void addTransfer(@Valid @RequestBody Transfer transfer) {
         this.transferDao.create(transfer);
 
 
         // TODO - Add exception if create doesn't work
     }
 
-
+    @GetMapping(path = "/user")
+    public User getUser(Principal principal){
+        String username = principal.getName();
+        User user = userDao.findByUsername(username);
+        return user;
+    }
 
 
 }
