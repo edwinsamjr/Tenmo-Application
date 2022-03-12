@@ -24,6 +24,14 @@ public interface TransferDao {
 
     boolean send(Transfer transfer) throws InvalidTransferException, AccountNotFoundException;
 
+    boolean request(Transfer transfer) throws InvalidTransferException, AccountNotFoundException;
+
+    List<Transfer> viewRequests(int accountId);
+
+    void approveRequest(int accountId, int transferId) throws InvalidTransferException;
+
+    void rejectRequest(int accountId, int transferId) throws InvalidTransferException;
+
     String getUsernameByAccountId (int accountId) throws UserNotFoundException;
 
 }

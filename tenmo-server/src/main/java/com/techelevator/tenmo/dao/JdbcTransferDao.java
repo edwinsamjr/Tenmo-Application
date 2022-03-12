@@ -116,7 +116,7 @@ public class JdbcTransferDao implements TransferDao {
 
         String sql = "SELECT transfer_id, transfer_type_id, transfer_status_id, account_from, account_to, amount " +
                 "FROM transfer " +
-                "WHERE transfer.account_from = ? OR transfer.account_to = ? " +
+                "WHERE (transfer.account_from = ? OR transfer.account_to = ?) AND transfer_status_id = 2 " +
                 "ORDER BY transfer_id;";
 
         SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql, accountId, accountId);
@@ -171,12 +171,81 @@ public class JdbcTransferDao implements TransferDao {
     }
 
     @Override
+    public boolean request(Transfer transfer) throws InvalidTransferException, AccountNotFoundException {
+        //Completes transfer
+
+        transfer.setTransfer_id(getMaxIdPlusOne());
+        BigDecimal userBalance = getBalance(transfer.getAccount_from());
+
+        if (!verifyAccounts(transfer)) {
+            throw new InvalidTransferException();
+        }
+
+        String sql = "INSERT INTO transfer (transfer_type_id, transfer_status_id, account_from, account_to, amount)" +
+                "VALUES (?, ?, ?, ?, ?)";
+
+        try {
+            this.jdbcTemplate.queryForObject(sql, Integer.class, 1,
+                    1, transfer.getAccount_from(), transfer.getAccount_to(), transfer.getAmount());
+        } catch (DataAccessException e) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public List<Transfer> viewRequests(int accountId) {
+        String sql = "SELECT transfer_id, transfer_type_id, transfer_status_id, account_from, account_to, amount " +
+                "FROM transfer " +
+                "WHERE transfer.account_from = ? AND transfer_status_id = 1 " +
+                "ORDER BY transfer_id;";
+
+        SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql, accountId);
+        List<Transfer> transfers = new ArrayList<>();
+        while (rowSet.next()) {
+            Transfer transfer = mapRowToTransfer(rowSet);
+            transfers.add(transfer);
+        }
+
+        return transfers;
+    }
+
+    @Override
+    public void approveRequest(int accountId, int transferId) throws InvalidTransferException {
+        Transfer transfer = findTransferById(transferId);
+        boolean isPendingTransaction = transfer.getTransfer_status_id() == 1;
+        BigDecimal balance = getBalance(accountId);
+        boolean hasSufficientFunds = balance.compareTo(transfer.getAmount()) >= 0;
+
+        if (!isPendingTransaction || !hasSufficientFunds) {
+            throw new InvalidTransferException();
+        }
+        String sql = "UPDATE transfer SET transfer_status_id = 2 " +
+                "WHERE account_from = ? AND transfer_id = ?;";
+        this.jdbcTemplate.update(sql, accountId, transferId);
+        completeTransfer(transfer);
+    }
+
+    @Override
+    public void rejectRequest(int accountId, int transferId) throws InvalidTransferException {
+        Transfer transfer = findTransferById(transferId);
+        boolean isPendingTransaction = transfer.getTransfer_status_id() == 1;
+
+        if (!isPendingTransaction) {
+            throw new InvalidTransferException();
+        }
+        String sql = "UPDATE transfer SET transfer_status_id = 3 " +
+                "WHERE account_from = ? AND transfer_id = ?;";
+        this.jdbcTemplate.update(sql, accountId, transferId);
+    }
+
+    @Override
     public String getUsernameByAccountId(int accountId) throws UserNotFoundException {
         String username = null;
         String sql = "SELECT username " +
-                     "FROM account " +
-                        "JOIN tenmo_user ON tenmo_user.user_id = account.user_id " +
-                     "WHERE account.account_id = ?;";
+                "FROM account " +
+                "JOIN tenmo_user ON tenmo_user.user_id = account.user_id " +
+                "WHERE account.account_id = ?;";
         SqlRowSet rowSet = this.jdbcTemplate.queryForRowSet(sql, accountId);
 
         if (rowSet.next()) {
@@ -207,7 +276,7 @@ public class JdbcTransferDao implements TransferDao {
     public List<Transfer> getAllTransfers() {
         List<Transfer> transfers = new ArrayList<>();
         String sql = "SELECT transfer_id, transfer_type_id, transfer_status_id, account_from, account_to, amount " +
-                     "FROM transfer;";
+                "FROM transfer;";
 
         SqlRowSet rowSet = this.jdbcTemplate.queryForRowSet(sql);
 
@@ -251,6 +320,7 @@ public class JdbcTransferDao implements TransferDao {
         updateSenderBalance(senderFinalBalance, senderAccount);
         updateReceiverBalance(receiverFinalBalance, receiverAccount);
     }
+
 
     public boolean verifyAccounts(Transfer transfer) throws AccountNotFoundException {
         /*Checks that both sender and receiver's account IDs are in database

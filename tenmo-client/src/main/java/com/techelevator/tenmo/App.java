@@ -116,8 +116,7 @@ public class App {
     }
 
     private void requestBucks() {
-        // TODO Auto-generated method stub
-
+      tenmoService.requestBucks();
     }
 
 }

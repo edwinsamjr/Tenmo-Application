@@ -82,11 +82,35 @@ public class ApplicationController {
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(path = "/transfer")
+    @PostMapping(path = "/send")
     public void addTransfer(@Valid @RequestBody Transfer transfer) throws InvalidTransferException, AccountNotFoundException {
         //Enters Transfer into database
 
         this.transferDao.send(transfer);
+    }
+
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping(path = "/request")
+    public void request(@Valid @RequestBody Transfer transfer) throws InvalidTransferException, AccountNotFoundException {
+        this.transferDao.request(transfer);
+    }
+
+    @GetMapping(path = "/viewrequests")
+    public List<Transfer> viewRequests(Principal principal) throws AccountNotFoundException {
+        int accountId = transferDao.getUserAccountId(principal.getName());
+        return transferDao.viewRequests(accountId);
+    }
+
+    @PostMapping(path = "/approve/{id}")
+    public void approveRequest(Principal principal, @PathVariable int id) throws AccountNotFoundException, InvalidTransferException {
+        int accountId = transferDao.getUserAccountId(principal.getName());
+        this.transferDao.approveRequest(accountId, id);
+    }
+
+    @PostMapping(path = "/reject/{id}")
+    public void rejectRequest(Principal principal, @PathVariable int id) throws AccountNotFoundException, InvalidTransferException {
+        int accountId = transferDao.getUserAccountId(principal.getName());
+        this.transferDao.rejectRequest(accountId, id);
     }
 
     @GetMapping(path = "/user")

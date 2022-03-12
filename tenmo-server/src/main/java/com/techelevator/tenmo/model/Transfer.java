@@ -7,9 +7,7 @@ import java.math.BigDecimal;
 public class Transfer {
 
     private int transfer_id;
-    @Positive(message = "Transfer type cannot be blank.")
     private int transfer_type;
-    @Positive(message = "Transfer status ID cannot be blank.")
     private int transfer_status_id;
     @Positive(message = "Sender cannot be blank.")
     private int account_from;
