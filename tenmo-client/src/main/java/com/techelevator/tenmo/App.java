@@ -107,7 +107,7 @@ public class App {
     }
 
     private void viewPendingRequests() {
-        // TODO Auto-generated method stub
+        tenmoService.viewRequests();
 
     }
 

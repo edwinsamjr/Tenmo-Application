@@ -3,6 +3,7 @@ package com.techelevator.tenmo.services;
 import com.techelevator.tenmo.model.Transfer;
 import com.techelevator.tenmo.model.User;
 import com.techelevator.util.BasicLogger;
+import org.apiguardian.api.API;
 import org.springframework.http.*;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
@@ -122,22 +123,25 @@ public class TenmoService {
         return balance;
     }
 
-    public void transfer(Transfer transfer) {
+    public boolean transfer(Transfer transfer) {
         //Check user has sufficient funds and positive transfer amount
         //Completes transfer
 
         try {
-            boolean hasSufficientFunds = getBalance().compareTo(transfer.getAmount()) < 0;
+            boolean hasSufficientFunds = getBalance().compareTo(transfer.getAmount()) >= 0;
             boolean positiveTransferAmount = transfer.getAmount().compareTo(new BigDecimal("0.00")) > 0;
-            if (hasSufficientFunds || !positiveTransferAmount) {
+            if (!hasSufficientFunds || !positiveTransferAmount) {
                 throw new IllegalArgumentException();
             }
-            restTemplate.exchange(API_BASE_URL + "transfer", HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
+            restTemplate.exchange(API_BASE_URL + "send", HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
+            return true;
         } catch (RestClientResponseException | ResourceAccessException e) {
             BasicLogger.log(e.getMessage());
+            return false;
         } catch (IllegalArgumentException e) {
             System.out.println();
             System.out.println("Invalid Transfer Amount");
+            return false;
         }
     }
 
@@ -202,9 +206,12 @@ public class TenmoService {
                 int receiverAccount = getAccountIdByUsername(selectedUser.getUsername());
                 transfer = new Transfer(2, 2, senderAccount, receiverAccount, amount);
             }
-            transfer(transfer);
+            boolean isValidTransfer = transfer(transfer);
             System.out.println();
-            System.out.println("You have sent $" + transfer.getAmount() + " to " + selectedUser.getUsername());
+
+            if (isValidTransfer) {
+                System.out.println("You have sent $" + transfer.getAmount() + " to " + selectedUser.getUsername());
+            }
         } catch (NullPointerException e) {
             System.out.println("Invalid User ID");
         }
@@ -331,24 +338,59 @@ public class TenmoService {
             userSelection = consoleService.promptForInt("Please enter transfer ID to approve/reject (0 to cancel): ");
         }
         int userChoice = -1;
+
         if (userSelection != 0) {
+            boolean foundTransfer = false;
 
             for (Transfer transfer : transfers) {
 
-
                 if (transfer.getTransfer_id() == userSelection) {
                     userChoice = approveOrRejectPendingTransfer();
+
+                    if (userChoice == 1) {
+                        approveRequest(transfer);
+                    } else if (userChoice == 2) {
+                        rejectRequest(transfer);
+                    } else {
+                        System.out.println("Request still pending.");
+                    }
+
+                    foundTransfer = true;
                 }
 
             }
 
+            if (!foundTransfer) {
+                System.out.println("Invalid Transfer Id");
+            }
+
         }
-        if (userChoice == 1) {
-            //Approve request
-        } else if (userChoice == 2) {
-            //Reject request
-        } else {
-            System.out.println("Request still pending.");
+
+
+
+
+
+    }
+
+    public void approveRequest(Transfer transfer) {
+        try {
+            restTemplate.exchange(API_BASE_URL + "approve/" + transfer.getTransfer_id(), HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
+        } catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println();
+            System.out.println("Invalid Transfer Amount");
+        }
+    }
+
+    public void rejectRequest(Transfer transfer) {
+        try {
+            restTemplate.exchange(API_BASE_URL + "reject/" + transfer.getTransfer_id(), HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
+        } catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println();
+            System.out.println("Invalid Transfer Amount");
         }
     }
 
