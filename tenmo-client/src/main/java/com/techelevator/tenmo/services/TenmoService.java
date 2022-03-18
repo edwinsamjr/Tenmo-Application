@@ -3,6 +3,7 @@ package com.techelevator.tenmo.services;
 import com.techelevator.tenmo.model.Transfer;
 import com.techelevator.tenmo.model.User;
 import com.techelevator.util.BasicLogger;
+import io.cucumber.java.sl.In;
 import org.apiguardian.api.API;
 import org.springframework.http.*;
 import org.springframework.web.client.ResourceAccessException;
@@ -10,6 +11,9 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TenmoService {
 
@@ -135,7 +139,7 @@ public class TenmoService {
             }
             restTemplate.exchange(API_BASE_URL + "send", HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
             return true;
-        } catch (RestClientResponseException | ResourceAccessException e) {
+        } catch (RestClientResponseException | ResourceAccessException | NullPointerException e) {
             BasicLogger.log(e.getMessage());
             return false;
         } catch (IllegalArgumentException e) {
@@ -159,6 +163,21 @@ public class TenmoService {
             System.out.println("Invalid Transfer Amount");
         }
     }
+
+//    public Map<Integer, String> getUserMap() {
+//        Map<Integer, String> userMap = new HashMap<>();
+//
+//
+//        try {
+//            ResponseEntity<Map<Integer, String>> response = restTemplate.exchange(API_BASE_URL + "usermap",
+//                    HttpMethod.GET, makeAuthEntity(), Map<Integer, String>.class);
+//            userMap = response.getBody();
+//        } catch (RestClientResponseException | ResourceAccessException e) {
+//            BasicLogger.log(e.getMessage());
+//        }
+//
+//        return userMap;
+//    }
 
     private HttpEntity<Void> makeAuthEntity() {
         HttpHeaders headers = new HttpHeaders();
@@ -190,6 +209,7 @@ public class TenmoService {
         try {
             User[] users = getUserList();
             printUserList(users);
+
             int userSelection = consoleService.promptForInt("Enter ID of user you are sending to (0 to cancel): ");
             User selectedUser = null;
             for (User user : users) {
@@ -198,7 +218,8 @@ public class TenmoService {
                 }
             }
 
-            Transfer transfer = null;
+
+            Transfer transfer = new Transfer();
 
             if (userSelection != 0) {
                 BigDecimal amount = consoleService.promptForBigDecimal("Enter amount: ");
@@ -206,6 +227,7 @@ public class TenmoService {
                 int receiverAccount = getAccountIdByUsername(selectedUser.getUsername());
                 transfer = new Transfer(2, 2, senderAccount, receiverAccount, amount);
             }
+
             boolean isValidTransfer = transfer(transfer);
             System.out.println();
 
@@ -216,6 +238,7 @@ public class TenmoService {
             System.out.println("Invalid User ID");
         }
     }
+
 
     public void requestBucks() {
         try {
@@ -229,17 +252,19 @@ public class TenmoService {
                 }
             }
 
-            Transfer transfer = null;
+            Transfer transfer;
 
             if (userSelection != 0) {
                 BigDecimal amount = consoleService.promptForBigDecimal("Enter amount: ");
                 int receiverAccount = getAccountIdByUsername();
                 int senderAccount = getAccountIdByUsername(selectedUser.getUsername());
                 transfer = new Transfer(1, 1, senderAccount, receiverAccount, amount);
+
+                request(transfer);
+                System.out.println();
+                System.out.println("You have requested $" + transfer.getAmount() + " from " + selectedUser.getUsername());
             }
-            request(transfer);
-            System.out.println();
-            System.out.println("You have requested $" + transfer.getAmount() + " from " + selectedUser.getUsername());
+
         } catch (NullPointerException e) {
             System.out.println("Invalid User ID");
         }
@@ -254,7 +279,10 @@ public class TenmoService {
         System.out.println("-------------------------------------------");
 
 
+
         Transfer[] transfers = findUserTransfers();
+
+        //Map < transfer id , username >
 
 
         for (Transfer transfer : transfers) {
@@ -375,6 +403,9 @@ public class TenmoService {
     public void approveRequest(Transfer transfer) {
         try {
             restTemplate.exchange(API_BASE_URL + "approve/" + transfer.getTransfer_id(), HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
+            System.out.println();
+            System.out.println("You have sent $" + transfer.getAmount() + " to " + getUsernameByAccountId(transfer.getAccount_to()));
+            System.out.println();
         } catch (RestClientResponseException | ResourceAccessException e) {
             BasicLogger.log(e.getMessage());
         } catch (IllegalArgumentException e) {
@@ -386,6 +417,9 @@ public class TenmoService {
     public void rejectRequest(Transfer transfer) {
         try {
             restTemplate.exchange(API_BASE_URL + "reject/" + transfer.getTransfer_id(), HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
+            System.out.println();
+            System.out.println("You have rejected transfer #" + transfer.getTransfer_id());
+            System.out.println();
         } catch (RestClientResponseException | ResourceAccessException e) {
             BasicLogger.log(e.getMessage());
         } catch (IllegalArgumentException e) {

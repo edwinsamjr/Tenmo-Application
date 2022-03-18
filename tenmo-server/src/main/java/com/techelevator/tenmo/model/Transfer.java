@@ -19,6 +19,8 @@ public class Transfer {
     @Positive(message = "Transfer amount must be positive.")
     private BigDecimal amount;
 
+
+
     public Transfer() {
 
     }
@@ -79,4 +81,5 @@ public class Transfer {
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
-}
+
+    }

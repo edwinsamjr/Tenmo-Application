@@ -2,9 +2,7 @@ package com.techelevator.tenmo.controller;
 
 import com.techelevator.tenmo.dao.TransferDao;
 import com.techelevator.tenmo.dao.UserDao;
-import com.techelevator.tenmo.exceptions.AccountNotFoundException;
-import com.techelevator.tenmo.exceptions.InvalidTransferException;
-import com.techelevator.tenmo.exceptions.UserNotFoundException;
+import com.techelevator.tenmo.exceptions.*;
 import com.techelevator.tenmo.model.Transfer;
 import com.techelevator.tenmo.model.User;
 import org.springframework.http.HttpStatus;
@@ -14,8 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.security.Principal;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @PreAuthorize("isAuthenticated()")
 @RestController
@@ -30,117 +29,107 @@ public class ApplicationController {
     }
 
     @GetMapping(path = "/balance")
-    public BigDecimal findBalance(Principal principal) throws AccountNotFoundException {
+    public BigDecimal findBalance(Principal principal) {
         //Gets current user's balance
-
-        String username = principal.getName();
-        int accountId = this.transferDao.getUserAccountId(username);
-        return this.transferDao.getBalance(accountId);
+        return this.transferDao.getBalance(principal.getName());
     }
+
 
     @GetMapping(path = "/users")
     public List<User> listUsers(Principal principal) {
         //Lists users besides current user
 
-        List<User> allUsers = this.userDao.findAll();
-
-        List<User> sendableUsers = new ArrayList<>();
-
-        String username = principal.getName();
-
-        for (User user : allUsers) {
-            User currentUser = this.userDao.findByUsername(username);
-            boolean loggedInUser = user.getUsername().equals(currentUser.getUsername());
-            if (!loggedInUser) {
-                sendableUsers.add(user);
-            }
-        }
-
+        List<User> sendableUsers = this.userDao.findSendableUsers(principal.getName());
         return sendableUsers;
 
     }
 
+
     @GetMapping(path = "/viewtransfers")
-    public List<Transfer> viewTransfers(Principal principal) throws AccountNotFoundException {
+    public List<Transfer> viewTransfers(Principal principal){
         //Lists all transfers for current user
 
-        String username = principal.getName();
-
-        int accountId = this.transferDao.getUserAccountId(username);
-
-        List<Transfer> currentUserTransfers = this.transferDao.findUserTransfers(accountId);
-
+        List<Transfer> currentUserTransfers = this.transferDao.findUserTransfers(principal.getName());
         return currentUserTransfers;
 
     }
 
     @GetMapping(path = "/viewtransfers/{id}")
-    public Transfer viewTransferById(@PathVariable int id) {
+    public Transfer viewTransferById(Principal principal, @PathVariable int id) throws TransferNotFoundException {
 
-        Transfer transfer = this.transferDao.findTransferById(id);
+        Transfer transfer = this.transferDao.findTransferById(principal.getName(), id);
         return transfer;
     }
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(path = "/send")
-    public void addTransfer(@Valid @RequestBody Transfer transfer) throws InvalidTransferException, AccountNotFoundException {
+    public void addTransfer(Principal principal, @Valid @RequestBody Transfer transfer) throws InvalidTransferException, AccountNotFoundException {
         //Enters Transfer into database
 
-        this.transferDao.send(transfer);
+        this.transferDao.send(transfer, principal.getName());
     }
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(path = "/request")
-    public void request(@Valid @RequestBody Transfer transfer) throws InvalidTransferException, AccountNotFoundException {
-        this.transferDao.request(transfer);
+    public void request(Principal principal, @Valid @RequestBody Transfer transfer) throws InvalidTransferException{
+
+        this.transferDao.request(transfer, principal.getName());
     }
+
 
     @GetMapping(path = "/viewrequests")
-    public List<Transfer> viewRequests(Principal principal) throws AccountNotFoundException {
-        int accountId = transferDao.getUserAccountId(principal.getName());
-        return transferDao.viewRequests(accountId);
+    public List<Transfer> viewRequests(Principal principal){
+        return transferDao.viewRequests(principal.getName());
     }
 
+
     @PostMapping(path = "/approve/{id}")
-    public void approveRequest(Principal principal, @PathVariable int id) throws AccountNotFoundException, InvalidTransferException {
-        int accountId = transferDao.getUserAccountId(principal.getName());
-        this.transferDao.approveRequest(accountId, id);
+    public void approveRequest(Principal principal, @PathVariable int id) throws InvalidTransferException {
+        this.transferDao.approveRequest(id, principal.getName());
     }
 
     @PostMapping(path = "/reject/{id}")
-    public void rejectRequest(Principal principal, @PathVariable int id) throws AccountNotFoundException, InvalidTransferException {
-        int accountId = transferDao.getUserAccountId(principal.getName());
-        this.transferDao.rejectRequest(accountId, id);
+    public void rejectRequest(Principal principal, @PathVariable int id) throws IllegalTranscationException {
+        this.transferDao.rejectRequest(id, principal.getName());
     }
 
     @GetMapping(path = "/user")
     public User getUser(Principal principal) {
         //Gets current user
 
-        String username = principal.getName();
-        User user = userDao.findByUsername(username);
+        User user = userDao.findByUsername(principal.getName());
         return user;
     }
 
+
     @GetMapping(path = "/username/{id}")
-    public String getUsernameByAccountId(Principal principal, @PathVariable int id) throws UserNotFoundException {
+    public String getUsernameByAccountId(Principal principal, @PathVariable int id) {
 
         String username = transferDao.getUsernameByAccountId(id);
         return username;
     }
 
     @GetMapping(path = "/account")
-    public int getAccountId(Principal principal) throws AccountNotFoundException {
+    public int getAccountId(Principal principal){
         //Gets current user's account Id
 
         int accountId = transferDao.getUserAccountId(principal.getName());
         return accountId;
     }
 
+
     @GetMapping(path = "/account/{username}")
-    public int getAccountIdByUsername(@PathVariable String username) throws AccountNotFoundException {
+    public int getAccountIdByUsername(@PathVariable String username) {
         int accountId = transferDao.getUserAccountId(username);
         return accountId;
+    }
+
+    @GetMapping (path = "/usermap")
+    public Map<Integer, String> getUserMap() {
+        Map<Integer, String> userMap = userDao.getUserMap();
+        //run method to create HashMap
+
+        return userMap;
     }
 
 

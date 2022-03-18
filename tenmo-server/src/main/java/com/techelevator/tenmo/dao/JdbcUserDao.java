@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class JdbcUserDao implements UserDao {
@@ -38,6 +40,18 @@ public class JdbcUserDao implements UserDao {
         List<User> users = new ArrayList<>();
         String sql = "SELECT user_id, username, password_hash FROM tenmo_user;";
         SqlRowSet results = jdbcTemplate.queryForRowSet(sql);
+        while(results.next()) {
+            User user = mapRowToUser(results);
+            users.add(user);
+        }
+        return users;
+    }
+
+    @Override
+    public List<User> findSendableUsers(String username) {
+        List<User> users = new ArrayList<>();
+        String sql = "SELECT user_id, username, password_hash FROM tenmo_user WHERE username != ?;";
+        SqlRowSet results = jdbcTemplate.queryForRowSet(sql, username);
         while(results.next()) {
             User user = mapRowToUser(results);
             users.add(user);
@@ -77,6 +91,21 @@ public class JdbcUserDao implements UserDao {
         }
 
         return true;
+    }
+
+    @Override
+    public Map<Integer, String> getUserMap() {
+        String sql = "SELECT user_id, username, password_hash FROM tenmo_user;";
+
+        SqlRowSet rowSet = this.jdbcTemplate.queryForRowSet(sql);
+        Map<Integer, String> userMap = new HashMap<>();
+
+        while (rowSet.next()) {
+            User user = mapRowToUser(rowSet);
+            userMap.put(user.getId().intValue(), user.getUsername());
+        }
+
+        return userMap;
     }
 
     private User mapRowToUser(SqlRowSet rs) {
