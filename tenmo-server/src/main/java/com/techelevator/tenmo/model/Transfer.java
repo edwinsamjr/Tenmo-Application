@@ -1,10 +1,13 @@
 package com.techelevator.tenmo.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Positive;
 import java.math.BigDecimal;
 
 public class Transfer {
+
 
     private int transfer_id;
     private int transfer_type;
