@@ -81,6 +81,7 @@ public class JdbcTransferDao implements TransferDao {
 
     public boolean checkSufficientFundsForSend(Transfer transfer, String username) {
         BigDecimal balance = getBalance(username);
+                            //transferDetails.getBalance
 
         if (balance.compareTo(transfer.getAmount()) > -1) {
             return true;

@@ -164,20 +164,6 @@ public class TenmoService {
         }
     }
 
-//    public Map<Integer, String> getUserMap() {
-//        Map<Integer, String> userMap = new HashMap<>();
-//
-//
-//        try {
-//            ResponseEntity<Map<Integer, String>> response = restTemplate.exchange(API_BASE_URL + "usermap",
-//                    HttpMethod.GET, makeAuthEntity(), Map<Integer, String>.class);
-//            userMap = response.getBody();
-//        } catch (RestClientResponseException | ResourceAccessException e) {
-//            BasicLogger.log(e.getMessage());
-//        }
-//
-//        return userMap;
-//    }
 
     private HttpEntity<Void> makeAuthEntity() {
         HttpHeaders headers = new HttpHeaders();
