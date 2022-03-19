@@ -24,7 +24,6 @@ public class App {
 
 
     public static void main(String[] args) {
-
         App app = new App();
         app.run();
     }
@@ -48,6 +47,7 @@ public class App {
                 handleLogin();
                 if (currentUser != null) {
                     tenmoService.setAuthToken(currentUser.getToken());
+                    tenmoService.setCurrentUser(currentUser);
                 }
             } else if (menuSelection != 0) {
                 System.out.println("Invalid Selection");

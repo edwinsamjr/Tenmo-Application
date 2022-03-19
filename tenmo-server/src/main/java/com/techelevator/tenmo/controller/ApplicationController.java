@@ -1,9 +1,11 @@
 package com.techelevator.tenmo.controller;
 
 import com.techelevator.tenmo.dao.TransferDao;
+import com.techelevator.tenmo.dao.TransferDetailsDao;
 import com.techelevator.tenmo.dao.UserDao;
 import com.techelevator.tenmo.exceptions.*;
 import com.techelevator.tenmo.model.Transfer;
+import com.techelevator.tenmo.model.TransferDetails;
 import com.techelevator.tenmo.model.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,8 +24,10 @@ public class ApplicationController {
 
     TransferDao transferDao;
     UserDao userDao;
+    TransferDetailsDao transferDetailsDao;
 
-    public ApplicationController(TransferDao transferDao, UserDao userDao) {
+    public ApplicationController(TransferDao transferDao, UserDao userDao, TransferDetailsDao transferDetailsDao) {
+        this.transferDetailsDao = transferDetailsDao;
         this.transferDao = transferDao;
         this.userDao = userDao;
     }
@@ -46,10 +50,19 @@ public class ApplicationController {
 
 
     @GetMapping(path = "/viewtransfers")
-    public List<Transfer> viewTransfers(Principal principal){
+    public List<Transfer> viewTransfers(Principal principal) {
         //Lists all transfers for current user
 
         List<Transfer> currentUserTransfers = this.transferDao.findUserTransfers(principal.getName());
+        return currentUserTransfers;
+
+    }
+
+    @GetMapping(path = "/viewtransferdetails")
+    public List<TransferDetails> viewTransferDetails(Principal principal) {
+        //Lists all transfers with details for current user
+
+        List<TransferDetails> currentUserTransfers = this.transferDetailsDao.findUserTransferDetails(principal.getName());
         return currentUserTransfers;
 
     }
@@ -59,6 +72,13 @@ public class ApplicationController {
 
         Transfer transfer = this.transferDao.findTransferById(principal.getName(), id);
         return transfer;
+    }
+
+    @GetMapping(path = "/viewtransferdetails/{id}")
+    public TransferDetails viewTransferDetailsById(Principal principal, @PathVariable int id) throws TransferNotFoundException {
+
+        TransferDetails transferDetails = this.transferDetailsDao.findTransferById(principal.getName(), id);
+        return transferDetails;
     }
 
     @ResponseStatus(HttpStatus.CREATED)
@@ -71,15 +91,20 @@ public class ApplicationController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(path = "/request")
-    public void request(Principal principal, @Valid @RequestBody Transfer transfer) throws InvalidTransferException{
+    public void request(Principal principal, @Valid @RequestBody Transfer transfer) throws InvalidTransferException {
 
         this.transferDao.request(transfer, principal.getName());
     }
 
 
     @GetMapping(path = "/viewrequests")
-    public List<Transfer> viewRequests(Principal principal){
+    public List<Transfer> viewRequests(Principal principal) {
         return transferDao.viewRequests(principal.getName());
+    }
+
+    @GetMapping(path = "/listrequests")
+    public List<TransferDetails> listRequests(Principal principal) {
+        return transferDetailsDao.listRequests(principal.getName());
     }
 
 
@@ -102,15 +127,15 @@ public class ApplicationController {
     }
 
 
-    @GetMapping(path = "/username/{id}")
-    public String getUsernameByAccountId(Principal principal, @PathVariable int id) {
-
-        String username = transferDao.getUsernameByAccountId(id);
-        return username;
-    }
+//    @GetMapping(path = "/username/{id}")
+//    public String getUsernameByAccountId(Principal principal, @PathVariable int id) {
+//
+//        String username = transferDao.getUsernameByAccountId(id);
+//        return username;
+//    }
 
     @GetMapping(path = "/account")
-    public int getAccountId(Principal principal){
+    public int getAccountId(Principal principal) {
         //Gets current user's account Id
 
         int accountId = transferDao.getUserAccountId(principal.getName());
@@ -124,7 +149,7 @@ public class ApplicationController {
         return accountId;
     }
 
-    @GetMapping (path = "/usermap")
+    @GetMapping(path = "/usermap")
     public Map<Integer, String> getUserMap() {
         Map<Integer, String> userMap = userDao.getUserMap();
         //run method to create HashMap

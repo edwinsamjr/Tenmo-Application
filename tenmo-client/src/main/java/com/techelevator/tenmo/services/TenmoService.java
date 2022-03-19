@@ -1,6 +1,8 @@
 package com.techelevator.tenmo.services;
 
+import com.techelevator.tenmo.model.AuthenticatedUser;
 import com.techelevator.tenmo.model.Transfer;
+import com.techelevator.tenmo.model.TransferDetails;
 import com.techelevator.tenmo.model.User;
 import com.techelevator.util.BasicLogger;
 import io.cucumber.java.sl.In;
@@ -23,6 +25,12 @@ public class TenmoService {
 
     private String authToken;
 
+    private AuthenticatedUser currentUser;
+
+    public void setCurrentUser(AuthenticatedUser currentUser) {
+        this.currentUser = currentUser;
+    }
+
     public void setAuthToken(String authToken) {
         this.authToken = authToken;
     }
@@ -41,30 +49,32 @@ public class TenmoService {
         return transfers;
     }
 
-    public Transfer[] findUserRequests() {
+    public TransferDetails[] findUserTransferDetails() {
+        //Gets all transfer details for current user
+
+        TransferDetails[] transferDetails = null;
+        try {
+            ResponseEntity<TransferDetails[]> response = restTemplate.exchange(API_BASE_URL + "viewtransferdetails",
+                    HttpMethod.GET, makeAuthEntity(), TransferDetails[].class);
+            transferDetails = response.getBody();
+        } catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        }
+        return transferDetails;
+    }
+
+    public TransferDetails[] findUserRequests() {
         //Gets all requests for current user
 
-        Transfer[] requests = null;
+        TransferDetails[] requests = null;
         try {
-            ResponseEntity<Transfer[]> response = restTemplate.exchange(API_BASE_URL + "viewrequests",
-                    HttpMethod.GET, makeAuthEntity(), Transfer[].class);
+            ResponseEntity<TransferDetails[]> response = restTemplate.exchange(API_BASE_URL + "listrequests",
+                    HttpMethod.GET, makeAuthEntity(), TransferDetails[].class);
             requests = response.getBody();
         } catch (RestClientResponseException | ResourceAccessException e) {
             BasicLogger.log(e.getMessage());
         }
         return requests;
-    }
-
-    public String getUsernameByAccountId(int accountId) {
-        String username = null;
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(API_BASE_URL + "username/" + accountId,
-                    HttpMethod.GET, makeAuthEntity(), String.class);
-            username = response.getBody();
-        } catch (RestClientResponseException | ResourceAccessException e) {
-            BasicLogger.log(e.getMessage());
-        }
-        return username;
     }
 
     public User[] getUserList() {
@@ -265,22 +275,19 @@ public class TenmoService {
         System.out.println("-------------------------------------------");
 
 
-
-        Transfer[] transfers = findUserTransfers();
-
-        //Map < transfer id , username >
+        TransferDetails[] transfers = findUserTransferDetails();
 
 
-        for (Transfer transfer : transfers) {
+        for (TransferDetails transfer : transfers) {
             int transferId = transfer.getTransfer_id();
-            String senderName = getUsernameByAccountId(transfer.getAccount_from());
-            String receiverName = getUsernameByAccountId(transfer.getAccount_to());
+            String senderName = transfer.getSenderUsername();
+            String receiverName = transfer.getReceiverUsername();
             BigDecimal amount = transfer.getAmount();
 
             String fieldToPrint = null;
 
-            int currentUserAccountId = getAccountIdByUsername();
-            boolean currentUserIsSender = currentUserAccountId == transfer.getAccount_from();
+
+            boolean currentUserIsSender = currentUser.getUser().getUsername().equals(transfer.getSenderUsername());
 
 
             //if current user is the sender, write To and receiver's name
@@ -303,13 +310,13 @@ public class TenmoService {
 
         if (userSelection != 0) {
 
-            for (Transfer transfer : transfers) {
+            for (TransferDetails transfer : transfers) {
 
 
                 if (transfer.getTransfer_id() == userSelection) {
-                    String senderName = getUsernameByAccountId(transfer.getAccount_from());
-                    String receiverName = getUsernameByAccountId(transfer.getAccount_to());
-                    transfer.printDetails(senderName, receiverName, "Send", "Approved");
+                    String senderName = transfer.getSenderUsername();
+                    String receiverName = transfer.getReceiverUsername();
+                    transfer.printDetails(senderName, receiverName, transfer.getTransferTypeName(), transfer.getTransferStatusName());
                 }
 
             }
@@ -327,18 +334,17 @@ public class TenmoService {
         System.out.println("-------------------------------------------");
 
 
-        Transfer[] transfers = findUserRequests();
+        TransferDetails[] transfers = findUserRequests();
 
 
-        for (Transfer transfer : transfers) {
+        for (TransferDetails transfer : transfers) {
             int transferId = transfer.getTransfer_id();
-            String receiverName = getUsernameByAccountId(transfer.getAccount_to());
+            String receiverName = transfer.getReceiverUsername();
             BigDecimal amount = transfer.getAmount();
 
             String fieldToPrint = null;
 
-            int currentUserAccountId = getAccountIdByUsername();
-            boolean currentUserIsSender = currentUserAccountId == transfer.getAccount_from();
+            boolean currentUserIsSender = currentUser.getUser().getUsername().equals(transfer.getSenderUsername());
 
             //if current user is the sender, write To and receiver's name
             fieldToPrint = "To:    " + receiverName;
@@ -356,7 +362,7 @@ public class TenmoService {
         if (userSelection != 0) {
             boolean foundTransfer = false;
 
-            for (Transfer transfer : transfers) {
+            for (TransferDetails transfer : transfers) {
 
                 if (transfer.getTransfer_id() == userSelection) {
                     userChoice = approveOrRejectPendingTransfer();
@@ -381,16 +387,13 @@ public class TenmoService {
         }
 
 
-
-
-
     }
 
-    public void approveRequest(Transfer transfer) {
+    public void approveRequest(TransferDetails transfer) {
         try {
             restTemplate.exchange(API_BASE_URL + "approve/" + transfer.getTransfer_id(), HttpMethod.POST, makeTransferEntity(transfer), Transfer.class);
             System.out.println();
-            System.out.println("You have sent $" + transfer.getAmount() + " to " + getUsernameByAccountId(transfer.getAccount_to()));
+            System.out.println("You have sent $" + transfer.getAmount() + " to " + transfer.getReceiverUsername());
             System.out.println();
         } catch (RestClientResponseException | ResourceAccessException e) {
             BasicLogger.log(e.getMessage());
